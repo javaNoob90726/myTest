@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?><DOC>
+<INFO MESSAGE="本次XML文件中解析出2条数据，其中2条成功，0条失败。" TYPE="1"/>
+<FILES>
+<FILE ERRORMSG="SCM\2018\07\11\11111\1111101.pdf文件在远程服务器上不存在" STATUS="0" SYSCODE="11111"/>
+<FILE ERRORMSG="SCM\2018\07\11\22222\2222201.pdf文件在远程服务器上不存在" STATUS="0" SYSCODE="22222"/>
+</FILES>
+</DOC>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/task
+		http://www.springframework.org/schema/task/spring-task.xsd
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+		http://www.springframework.org/schema/tx
+       	http://www.springframework.org/schema/tx/spring-tx.xsd
+       	http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd"
+		>
+	<context:annotation-config></context:annotation-config>
+
+
+    <context:component-scan base-package="com.unissoft.edad.ams.**.service,com.unissoft.edad.ams.**.dao">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+	<task:annotation-driven/>
+
+ 
+	<!--<task:scheduled-tasks>
+		<task:scheduled ref="itsamsImport" method="doImp" cron="${cron}"/>
+	</task:scheduled-tasks>-->
+
+	<tx:annotation-driven transaction-manager="txManager"/>
+
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+
+	  <!-- (this dependency is defined somewhere else) -->
+
+	  <property name="dataSource" ref="amsDs"/>
+
+	</bean>
+
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath*:jdbc.properties</value>
+				<value>classpath*:imp.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="stat-filter" class="com.alibaba.druid.filter.stat.StatFilter">
+	    <property name="slowSqlMillis" value="3000" />
+	    <property name="logSlowSql" value="true" />
+	</bean>
+	<!--
+	 -->
+	<bean id="wall-filter" class="com.alibaba.druid.wall.WallFilter">
+	    <property name="logViolation" value="true" />
+	    <property name="throwException" value="false" />
+	</bean>
+
+	<bean id="BaseDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close" abstract="true">
+		<property name="proxyFilters">
+		    <list>
+		        <ref bean="wall-filter" />
+		        <ref bean="stat-filter" />
+		    </list>
+		</property>
+	    <property name="maxActive"><value>20</value></property>
+	    <property name="initialSize"><value>1</value></property>
+	    <property name="maxWait"><value>60000</value></property>
+	    <property name="minIdle"><value>1</value></property>
+
+	    <property name="timeBetweenEvictionRunsMillis"><value>60000</value></property>
+	    <property name="minEvictableIdleTimeMillis"><value>300000</value></property>
+
+	    <property name="testWhileIdle"><value>true</value></property>
+	    <property name="testOnBorrow"><value>false</value></property>
+	    <property name="testOnReturn"><value>false</value></property>
+
+	    <property name="poolPreparedStatements"><value>true</value></property>
+	    <property name="maxOpenPreparedStatements"><value>20</value></property>
+	</bean>
+
+	<bean id="amsDs" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close" parent="BaseDataSource">
+	    <property name="url" value="${ams.jdbc.url}" />
+	    <property name="username" value="${ams.jdbc.username}" />
+	    <property name="password" value="${ams.jdbc.password}" />
+	    <property name="validationQuery"><value>${ams.jdbc.validationQuery}</value></property>
+	<!--
+	    <property name="filters" value="wall,stat" />
+	 -->
+	</bean>
+
+	<bean id="itsoaDs" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close" parent="BaseDataSource">
+	    <property name="url" value="${itsoa.jdbc.url}" />
+	    <property name="username" value="${itsoa.jdbc.username}" />
+	    <property name="password" value="${itsoa.jdbc.password}" />
+	    <property name="validationQuery"><value>${itsoa.jdbc.validationQuery}</value></property>
+	<!--
+	    <property name="filters" value="wall,stat" />
+	 -->
+	</bean>
+
+	<bean id="dataSource" class="com.unissoft.edad.oaIF.util.DynamicDataSource">
+		<property name="targetDataSources">
+			<map key-type="java.lang.String">
+				<entry key="amsDs" value-ref="amsDs"/>
+				<entry key="itsoaDs" value-ref="itsoaDs"/>
+			</map>
+		</property>
+		<property name="defaultTargetDataSource" ref="itsoaDs" />
+	</bean>
+
+	<bean id="jdbcTemplateId" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+	</bean>
+
+
+
+	<!-- 一种正确配置
+	<context:property-placeholder location="classpath:rootcfg.properties"/>
+
+	<util:properties id="jdbccfg" location="file:#{ '${rootpath}' + '/config/jdbc.properties' }"/>
+
+	<bean id="bizService" class="com.amc.hqt.service.WxHqtBiz" init-method="init">
+		<property name="driverClassName" value="#{ jdbccfg['jdbc.driverClassName'] }" />
+		<property name="username" value="#{jdbccfg['jdbc.username']}" />
+	</bean>
+
+	 -->
+
+	<!-- 一种正确配置方式
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	  <property name="locations" value="classpath:cfg.properties"/>
+	</bean>
+
+	<util:properties id="rootcfg" location="classpath:rootcfg.properties"/>
+	<util:properties id="jdbccfg" location="file:#{ rootcfg['rootpath'] + '/config/jdbc.properties' }"/>
+
+	<bean id="bizService" class="com.amc.hqt.service.WxHqtBiz" init-method="init">
+		<property name="driverClassName" value="#{ jdbccfg['jdbc.driverClassName'] }" />
+		<property name="username" value="${jdbc.username}" />
+	</bean>
+
+	 -->
+
+</beans>
